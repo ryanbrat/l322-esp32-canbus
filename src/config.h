@@ -17,4 +17,4 @@ static const uint32_t FILTERED_IDS[] = {
 #define BLOCK_FILTERED_MESSAGES true
 
 // Log all messages to serial
-#define LOG_ALL_MESSAGES true
+#define LOG_ALL_MESSAGES false

@@ -77,8 +77,30 @@ esp32-can-x2/
 
 - PlatformIO will automatically download:
   - ESP32 Arduino framework
-  - MCP2515 library (if needed)
+  - MCP_CAN library (coryjfowler/mcp_can)
 
+### 3.1 Custom Board Setup
+
+This project uses a custom board definition for the ESP32-S3-WROOM-1-N8R8 module with **8MB flash**. The board definition is located in `boards/esp32s3-wroom-1-n8r8.json`.
+
+Key `platformio.ini` settings:
+```ini
+[platformio]
+boards_dir = boards
+
+[env:esp32s3box]
+platform = espressif32
+board = esp32s3-wroom-1-n8r8
+board_build.flash_size = 8MB
+board_build.partitions = default_8mb.csv
+framework = arduino
+build_flags = 
+    -DCORE_DEBUG_LEVEL=3
+    -DARDUINO_USB_MODE=1
+    -DARDUINO_USB_CDC_ON_BOOT=1
+```
+
+> **Important:** The USB CDC flags are required for serial output on ESP32-S3.
 
 ### 4. Hardware Wiring & Pinout
 
@@ -88,8 +110,12 @@ esp32-can-x2/
 |------------------|-------------|
 | CAN1 (TWAI) RX   | GPIO6       |
 | CAN1 (TWAI) TX   | GPIO7       |
-| MCP2515 CS       | GPIO5       |
-| MCP2515 INT      | GPIO4       |
+| MCP2515 CS       | GPIO10      |
+| MCP2515 SCK      | GPIO12      |
+| MCP2515 MISO     | GPIO13      |
+| MCP2515 MOSI     | GPIO11      |
+| MCP2515 INT      | GPIO3       |
+| Built-in LED     | GPIO2       |
 
 #### ESP32-CAN-X2 to CAN Bus
 
@@ -115,9 +141,11 @@ esp32-can-x2/
    +-----------------------+         +------------------------+         +-----------------------+
 
    [MCP2515 SPI]
-   - CS:  GPIO5
-   - INT: GPIO4
-   - SCK/MISO/MOSI: Default SPI or as configured
+   - CS:   GPIO10
+   - SCK:  GPIO12
+   - MISO: GPIO13
+   - MOSI: GPIO11
+   - INT:  GPIO3
 ```
 
 ### 5. CAN Bus Termination
@@ -172,24 +200,12 @@ platformio device monitor --baud 115200
 Open Serial Monitor at **115200 baud**. You should see:
 
 ```
-=================================================
-CAN Bus Man-in-the-Middle Interceptor - ESP32-CAN-X2
-=================================================
-
-Initializing TWAI (CAN) at 500 kbps...
-  ✓ TWAI initialized
-Initializing MCP2515 at 500 kbps...
-  ✓ MCP2515 initialized
-
-✓ CAN Bus MITM Ready!
-
---- Configuration ---
-CAN Baudrate: 500000 bps
-Monitored Message IDs: 0x288, 0x29B, 0x2A6, 0x3D3, 0x3EB, 0x422
-Block Filtered Messages: YES
-Log All Messages: YES
-----------------------
+=== ESP32-CAN-X2 MITM Interceptor ===
+TWAI (CAN) initialized at 500 kbps
+MCP2515 (MCP_CAN_lib) initialized at 500 kbps
 ```
+
+> **Note:** The ESP32-S3 uses USB CDC for serial output. After uploading, you may need to press the **Reset** button while the serial monitor is open to see the startup messages.
 
 ## Features
 
@@ -270,8 +286,9 @@ The default configuration is set up for monitoring suspension and traction contr
 ## Library References
 
 - [ESP32 Arduino Core](https://github.com/espressif/arduino-esp32)
-- [MCP2515 Arduino Library](https://github.com/autowp/arduino-mcp2515)
+- [MCP_CAN Library](https://github.com/coryjfowler/MCP_CAN_lib) (coryjfowler/mcp_can)
 - [MCP2515 Datasheet](http://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Standalone-CAN-Controller-with-SPI-20001801J.pdf)
+- [ESP32-CAN-X2 Wiki](https://wiki.autosportlabs.com/ESP32-CAN-X2)
 
 ## License
 

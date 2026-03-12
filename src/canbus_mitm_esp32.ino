@@ -19,10 +19,16 @@
 #define CAN1_RX_PIN 6
 #define CAN1_TX_PIN 7
 
-// MCP2515 SPI pins (adjust as needed)
-#define MCP2515_CS 5
-#define MCP2515_INT 4
+// MCP2515 SPI pins (per ESP32-CAN-X2 documentation)
+#define MCP2515_CS   10
+#define MCP2515_SCK  12
+#define MCP2515_MISO 13
+#define MCP2515_MOSI 11
+#define MCP2515_INT  3
 MCP_CAN CAN(MCP2515_CS); // MCP_CAN_lib object
+
+// Built-in LED on GPIO2
+#define LED_PIN 2
 
 // Helper: check if ID is filtered
 bool isFiltered(uint32_t id) {
@@ -33,9 +39,15 @@ bool isFiltered(uint32_t id) {
 }
 
 void setup() {
+  // LED for visual feedback
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH); // LED on at start
+  
   Serial.begin(115200);
-  delay(1000);
-  Serial.println("\nESP32-CAN-X2 MITM Interceptor");
+  delay(2000); // Longer delay for USB CDC to enumerate
+  Serial.println();
+  Serial.println("=== ESP32-CAN-X2 MITM Interceptor ===");
+  Serial.flush();
 
   // Init TWAI (ESP32 CAN)
   twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)CAN1_TX_PIN, (gpio_num_t)CAN1_RX_PIN, TWAI_MODE_NORMAL);
@@ -49,9 +61,10 @@ void setup() {
   }
 
     // Init MCP2515 (MCP_CAN_lib)
-    SPI.begin();
-    // MCP_CAN_lib expects (baudrate, CS pin)
-    if (CAN.begin(MCP_STDEXT, CAN_BAUDRATE, MCP_16MHZ) == CAN_OK) {
+    SPI.begin(MCP2515_SCK, MCP2515_MISO, MCP2515_MOSI, MCP2515_CS);
+    // MCP_CAN_lib init: mode, baud, clock
+    if (CAN.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) == CAN_OK) {
+      CAN.setMode(MCP_NORMAL); // Set to normal mode to send/receive
       Serial.println("MCP2515 (MCP_CAN_lib) initialized at 500 kbps");
     } else {
       Serial.println("MCP2515 init failed");
@@ -88,12 +101,12 @@ void loop() {
     unsigned long can_id = 0;
     if (CAN.checkReceive() == CAN_MSGAVAIL) {
       CAN.readMsgBuf(&can_id, buf, &len);
-      if (LOG_ALL_MESSAGES) {
+
         Serial.printf("[CAN] ID: 0x%03lX DLC: %d Data:", can_id, len);
         for (uint8_t i = 0; i < len; ++i) Serial.printf(" %02X", buf[i]);
         if (isFiltered(can_id)) Serial.print(" [FILTERED]");
         Serial.println();
-      }
+
       if (isFiltered(can_id)) {
         if (BLOCK_FILTERED_MESSAGES) return; // Block
         // Custom handler here
